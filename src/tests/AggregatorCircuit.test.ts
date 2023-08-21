@@ -1,7 +1,9 @@
 import {
+  AccountUpdate,
   Field,
   MerkleMap,
   MerkleTree,
+  Mina,
   Nullifier,
   Poseidon,
   PrivateKey,
@@ -19,10 +21,20 @@ import {
   AggregatorCircuit,
   AggregatorState,
 } from '../circuits/AggregatorCircuit';
+import { Aggregator } from '../circuits/Aggregator';
 
 describe('Aggregator Circuit Test', () => {
+  let senderKey: PrivateKey;
+  let sender: PublicKey;
+
+  let zkAppKey: PrivateKey;
+  let zkAppAddress: PublicKey;
+
+  let aggregatorContract: Aggregator;
+
   let userCircuitVK: string;
   let aggregatorCircuitVK: string;
+  let aggregatorVK: any;
 
   let encryptionPrivateKey: PrivateKey;
   let encryptionPublicKey: PublicKey;
@@ -43,9 +55,13 @@ describe('Aggregator Circuit Test', () => {
   let userProof: Proof<UserState, void>;
 
   let aggregatorBaseProof: Proof<AggregatorState, void>;
+  let aggregatorProof: Proof<AggregatorState, void>;
   let aggregatorState: AggregatorState;
 
   beforeAll(async () => {
+    zkAppKey = PrivateKey.random();
+    zkAppAddress = PublicKey.fromPrivateKey(zkAppKey);
+
     encryptionPrivateKey = PrivateKey.random();
     encryptionPublicKey = PublicKey.fromPrivateKey(encryptionPrivateKey);
 
@@ -62,6 +78,15 @@ describe('Aggregator Circuit Test', () => {
     userCircuitVK = vk1;
     const { verificationKey: vk2 } = await AggregatorCircuit.compile();
     aggregatorCircuitVK = vk2;
+    const { verificationKey: vk3 } = await Aggregator.compile();
+    aggregatorVK = vk3;
+
+    let Local = Mina.LocalBlockchain({ proofsEnabled: true });
+    Mina.setActiveInstance(Local);
+
+    let { privateKey, publicKey } = Local.testAccounts[0];
+    senderKey = privateKey;
+    sender = publicKey;
   });
 
   it('should generate an User Proof', async () => {
@@ -105,6 +130,7 @@ describe('Aggregator Circuit Test', () => {
       electionID
     );
 
+    let time = Date.now();
     userProof = await UserCircuit.generateProof(
       userState,
       userSignature,
@@ -114,8 +140,11 @@ describe('Aggregator Circuit Test', () => {
       userBalance,
       merkleProof
     );
+    console.log('userCircuit proving -', (Date.now() - time) / 1000, 'sec');
 
+    time = Date.now();
     const result = await verify(userProof, userCircuitVK);
+    console.log('userCircuit verifying -', (Date.now() - time) / 1000, 'sec');
     expect(result).toBe(true);
   });
 
@@ -125,18 +154,62 @@ describe('Aggregator Circuit Test', () => {
       electionID,
       voterRoot,
       oldNullifierRoot,
-      newNullifierRoot,
+      oldNullifierRoot,
       nonce
     );
 
+    let time = Date.now();
     aggregatorBaseProof = await AggregatorCircuit.generateBaseProof(
       aggregatorState
     );
+    console.log(
+      'aggregatorCircuit base proving -',
+      (Date.now() - time) / 1000,
+      'sec'
+    );
 
+    time = Date.now();
     const result = await verify(aggregatorBaseProof, aggregatorCircuitVK);
+    console.log(
+      'aggregatorCircuit base verifying -',
+      (Date.now() - time) / 1000,
+      'sec'
+    );
     expect(result).toBe(true);
 
     nonce = nonce.add(Field(1));
+  });
+
+  it('should submit base proof to the contract', async () => {
+    aggregatorContract = new Aggregator(zkAppAddress);
+
+    let initialBalance = 10_000_000_000;
+
+    console.log('deploy');
+    let tx = await Mina.transaction(sender, () => {
+      let senderUpdate = AccountUpdate.fundNewAccount(sender);
+      senderUpdate.send({ to: zkAppAddress, amount: initialBalance });
+      aggregatorContract.deploy({
+        verificationKey: aggregatorVK,
+        zkappKey: zkAppKey,
+      });
+    });
+    await tx.prove();
+    await tx.sign([senderKey]).send();
+
+    tx = await Mina.transaction(sender, () => {
+      aggregatorContract.initializeElection(aggregatorBaseProof);
+    });
+    await tx.prove();
+    await tx.sign([senderKey]).send();
+
+    expect(aggregatorContract.electionID.get()).toEqual(electionID);
+
+    expect(aggregatorContract.encryptionPublicKey.get()).toEqual(
+      encryptionPublicKey
+    );
+
+    expect(aggregatorContract.voterRoot.get()).toEqual(voterRoot);
   });
 
   it('should generate an Aggregator Proof', async () => {
@@ -153,17 +226,37 @@ describe('Aggregator Circuit Test', () => {
       nonce
     );
 
-    const aggregatorProof = await AggregatorCircuit.generateProof(
+    let time = Date.now();
+    aggregatorProof = await AggregatorCircuit.generateProof(
       aggregatorState,
       aggregatorBaseProof,
       userProof,
       nullifierWitness
     );
+    console.log(
+      'aggregatorCircuit proving -',
+      (Date.now() - time) / 1000,
+      'sec'
+    );
 
+    time = Date.now();
     const result = await verify(aggregatorProof, aggregatorCircuitVK);
+    console.log(
+      'aggregatorCircuit verifying -',
+      (Date.now() - time) / 1000,
+      'sec'
+    );
     expect(result).toBe(true);
 
     oldNullifierRoot = newNullifierRoot;
     nonce = nonce.add(Field(1));
+  });
+
+  it('should submit final aggregator proof', async () => {
+    let tx = await Mina.transaction(sender, () => {
+      aggregatorContract.finalizeElection(aggregatorProof);
+    });
+    await tx.prove();
+    await tx.sign([senderKey]).send();
   });
 });

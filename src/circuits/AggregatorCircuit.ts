@@ -51,6 +51,12 @@ export const AggregatorCircuit = Experimental.ZkProgram({
         aggregatorstate.oldNullifierRoot.isConstant();
         aggregatorstate.newNullifierRoot.isConstant();
         aggregatorstate.nonce.isConstant();
+
+        aggregatorstate.oldNullifierRoot.assertEquals(
+          aggregatorstate.newNullifierRoot
+        );
+
+        aggregatorstate.nonce.assertEquals(Field(0));
       },
     },
 
