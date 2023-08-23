@@ -8,10 +8,11 @@ import {
 } from 'snarkyjs';
 import { UserCircuit, UserState } from './UserCircuit';
 import { ZkProgram } from 'snarkyjs/dist/node/lib/proof_system';
+import { EncryptionPublicKey } from '../utils/PallierZK';
 
 export class AggregatorState extends Struct({
   // Public
-  encryptionPublicKey: PublicKey,
+  encryptionPublicKey: EncryptionPublicKey,
   electionID: Field,
   voterRoot: Field,
   oldNullifierRoot: Field,
@@ -19,7 +20,7 @@ export class AggregatorState extends Struct({
   nonce: Field,
 }) {
   static create(
-    encryptionPublicKey: PublicKey,
+    encryptionPublicKey: EncryptionPublicKey,
     electionID: Field,
     voterRoot: Field,
     oldNullifierRoot: Field,
@@ -45,7 +46,8 @@ export const AggregatorCircuit = Experimental.ZkProgram({
       privateInputs: [],
 
       method(aggregatorstate: AggregatorState) {
-        aggregatorstate.encryptionPublicKey.isConstant();
+        aggregatorstate.encryptionPublicKey.n.isConstant();
+        aggregatorstate.encryptionPublicKey.g.isConstant();
         aggregatorstate.electionID.isConstant();
         aggregatorstate.voterRoot.isConstant();
         aggregatorstate.oldNullifierRoot.isConstant();
@@ -80,8 +82,11 @@ export const AggregatorCircuit = Experimental.ZkProgram({
         earlierProof.verify();
 
         // Verify if the Encryption Public Key matches
-        userProof.publicInput.encryptionPublicKey.assertEquals(
-          aggregatorState.encryptionPublicKey
+        userProof.publicInput.encryptionPublicKey.n.assertEquals(
+          aggregatorState.encryptionPublicKey.n
+        );
+        userProof.publicInput.encryptionPublicKey.g.assertEquals(
+          aggregatorState.encryptionPublicKey.g
         );
 
         // Verify if the election ID matches

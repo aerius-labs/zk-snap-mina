@@ -22,6 +22,9 @@ import {
   AggregatorState,
 } from '../circuits/AggregatorCircuit';
 import { Aggregator } from '../circuits/Aggregator';
+import * as paillierBigint from 'paillier-bigint';
+import { generateEncryptionKeyPair } from '../utils/Pallier';
+import { EncryptionPublicKey } from '../utils/PallierZK';
 
 describe('Aggregator Circuit Test', () => {
   let senderKey: PrivateKey;
@@ -36,8 +39,8 @@ describe('Aggregator Circuit Test', () => {
   let aggregatorCircuitVK: string;
   let aggregatorVK: any;
 
-  let encryptionPrivateKey: PrivateKey;
-  let encryptionPublicKey: PublicKey;
+  let encryptionPrivateKey: paillierBigint.PrivateKey;
+  let encryptionPublicKey: paillierBigint.PublicKey;
 
   let userPrivateKey: PrivateKey;
   let userPublicKey: PublicKey;
@@ -62,8 +65,10 @@ describe('Aggregator Circuit Test', () => {
     zkAppKey = PrivateKey.random();
     zkAppAddress = PublicKey.fromPrivateKey(zkAppKey);
 
-    encryptionPrivateKey = PrivateKey.random();
-    encryptionPublicKey = PublicKey.fromPrivateKey(encryptionPrivateKey);
+    const { publicKey: encPublicKey, privateKey: encPrivateKey } =
+      await generateEncryptionKeyPair();
+    encryptionPrivateKey = encPrivateKey;
+    encryptionPublicKey = encPublicKey;
 
     userPrivateKey = PrivateKey.random();
     userPublicKey = PublicKey.fromPrivateKey(userPrivateKey);
@@ -84,9 +89,10 @@ describe('Aggregator Circuit Test', () => {
     let Local = Mina.LocalBlockchain({ proofsEnabled: true });
     Mina.setActiveInstance(Local);
 
-    let { privateKey, publicKey } = Local.testAccounts[0];
-    senderKey = privateKey;
-    sender = publicKey;
+    const { privateKey: senderPrivateKey, publicKey: senderPublicKey } =
+      Local.testAccounts[0];
+    senderKey = senderPrivateKey;
+    sender = senderPublicKey;
   });
 
   it('should generate an User Proof', async () => {
@@ -97,6 +103,10 @@ describe('Aggregator Circuit Test', () => {
 
     const vote: Field = Field(1);
     const voteWeight: Field = Field(50);
+
+    const encryptedVote = encryptionPublicKey.encrypt(
+      vote.toBigInt() * voteWeight.toBigInt()
+    );
 
     const salt: Field = Field.random();
 
@@ -124,10 +134,14 @@ describe('Aggregator Circuit Test', () => {
 
     const userState = UserState.create(
       nullifier,
-      encryptionPublicKey,
+      EncryptionPublicKey.create(
+        Field(encryptionPublicKey.n),
+        Field(encryptionPublicKey.g)
+      ),
       voterRoot,
       userPublicKey,
-      electionID
+      electionID,
+      Field(encryptedVote)
     );
 
     let time = Date.now();
@@ -150,7 +164,10 @@ describe('Aggregator Circuit Test', () => {
 
   it('should generate an Aggregator Base Proof', async () => {
     aggregatorState = AggregatorState.create(
-      encryptionPublicKey,
+      EncryptionPublicKey.create(
+        Field(encryptionPublicKey.n),
+        Field(encryptionPublicKey.g)
+      ),
       electionID,
       voterRoot,
       oldNullifierRoot,
@@ -185,7 +202,6 @@ describe('Aggregator Circuit Test', () => {
 
     let initialBalance = 10_000_000_000;
 
-    console.log('deploy');
     let tx = await Mina.transaction(sender, () => {
       let senderUpdate = AccountUpdate.fundNewAccount(sender);
       senderUpdate.send({ to: zkAppAddress, amount: initialBalance });
@@ -204,11 +220,6 @@ describe('Aggregator Circuit Test', () => {
     await tx.sign([senderKey]).send();
 
     expect(aggregatorContract.electionID.get()).toEqual(electionID);
-
-    expect(aggregatorContract.encryptionPublicKey.get()).toEqual(
-      encryptionPublicKey
-    );
-
     expect(aggregatorContract.voterRoot.get()).toEqual(voterRoot);
   });
 
@@ -218,7 +229,10 @@ describe('Aggregator Circuit Test', () => {
     );
 
     aggregatorState = AggregatorState.create(
-      encryptionPublicKey,
+      EncryptionPublicKey.create(
+        Field(encryptionPublicKey.n),
+        Field(encryptionPublicKey.g)
+      ),
       electionID,
       voterRoot,
       oldNullifierRoot,

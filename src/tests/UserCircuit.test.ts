@@ -15,12 +15,15 @@ import {
   UserCircuit,
   UserState,
 } from '../circuits/UserCircuit';
+import * as paillierBigint from 'paillier-bigint';
+import { generateEncryptionKeyPair } from '../utils/Pallier';
+import { EncryptionPublicKey } from '../utils/PallierZK';
 
 const __dirname = path.resolve();
 
 describe('User Circuit Test', () => {
-  let encryptionPrivateKey: PrivateKey;
-  let encryptionPublicKey: PublicKey;
+  let encryptionPrivateKey: paillierBigint.PrivateKey;
+  let encryptionPublicKey: paillierBigint.PublicKey;
 
   let userPrivateKey: PrivateKey;
   let userPublicKey: PublicKey;
@@ -28,8 +31,12 @@ describe('User Circuit Test', () => {
   let electionID = Field(1);
 
   beforeAll(async () => {
-    encryptionPrivateKey = PrivateKey.random();
-    encryptionPublicKey = PublicKey.fromPrivateKey(encryptionPrivateKey);
+    // Generate Paillier Keys
+    const { publicKey, privateKey } = await generateEncryptionKeyPair();
+    encryptionPrivateKey = privateKey;
+    encryptionPublicKey = publicKey;
+    console.log('Encryption Private Key: ', encryptionPrivateKey);
+    console.log('Encryption Public Key: ', encryptionPublicKey);
 
     userPrivateKey = PrivateKey.random();
     userPublicKey = PublicKey.fromPrivateKey(userPrivateKey);
@@ -43,6 +50,11 @@ describe('User Circuit Test', () => {
 
     const vote: Field = Field(1);
     const voteWeight: Field = Field(50);
+
+    const encryptedVote = encryptionPublicKey.encrypt(
+      vote.toBigInt() * voteWeight.toBigInt()
+    );
+    console.log('Encrypted Vote: ', encryptedVote);
 
     const salt: Field = Field.random();
 
@@ -69,10 +81,14 @@ describe('User Circuit Test', () => {
 
     const userState = UserState.create(
       nullifier,
-      encryptionPublicKey,
+      EncryptionPublicKey.create(
+        Field(encryptionPublicKey.n),
+        Field(encryptionPublicKey.g)
+      ),
       voterRoot,
       userPublicKey,
-      electionID
+      electionID,
+      Field(encryptedVote)
     );
 
     const { verificationKey } = await UserCircuit.compile();

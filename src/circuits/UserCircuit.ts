@@ -8,21 +8,24 @@ import {
   Nullifier,
   PublicKey,
 } from 'snarkyjs';
+import { EncryptionPublicKey } from '../utils/PallierZK';
 
 export class UserState extends Struct({
   // Public
   nullifier: Nullifier,
-  encryptionPublicKey: PublicKey,
+  encryptionPublicKey: EncryptionPublicKey,
   voterRoot: Field,
   userPublicKey: PublicKey,
   electionID: Field,
+  encrypted_vote: Field,
 }) {
   static create(
     nullifier: Nullifier,
-    encryptionPublicKey: PublicKey,
+    encryptionPublicKey: EncryptionPublicKey,
     voterRoot: Field,
     userPublicKey: PublicKey,
-    electionID: Field
+    electionID: Field,
+    encrypted_vote: Field
   ) {
     return new UserState({
       nullifier,
@@ -30,6 +33,7 @@ export class UserState extends Struct({
       voterRoot,
       userPublicKey,
       electionID,
+      encrypted_vote,
     });
   }
 }

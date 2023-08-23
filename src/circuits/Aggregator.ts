@@ -9,13 +9,15 @@ import {
   state,
 } from 'snarkyjs';
 import { AggregatorCircuit, AggregatorState } from './AggregatorCircuit';
+import { EncryptionPublicKey } from '../utils/PallierZK';
 
 let AggregatorProof_ = Experimental.ZkProgram.Proof(AggregatorCircuit);
 class AggregatorProof extends AggregatorProof_ {}
 
 export class Aggregator extends SmartContract {
   @state(Field) electionID = State<Field>();
-  @state(PublicKey) encryptionPublicKey = State<PublicKey>();
+  @state(EncryptionPublicKey) encryptionPublicKey =
+    State<EncryptionPublicKey>();
   @state(Field) voterRoot = State<Field>();
 
   @method initializeElection(baseProof: AggregatorProof): void {
