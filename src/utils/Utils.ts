@@ -1,6 +1,6 @@
-import { Field, Bool, Provable } from 'snarkyjs';
+import { Field, Bool, Provable } from 'o1js';
 
-export const exp = (base: Field, exponent: Field) => {
+export const exp = (base: Field, exponent: Field, mod: Field) => {
   let bits = exponent.toBits();
   let n = base;
 
@@ -17,11 +17,13 @@ export const exp = (base: Field, exponent: Field) => {
     let isOne = start.and(bit.equals(false));
     let isZero = start.and(bit.equals(true));
 
-    let square = n.square();
+    // let square = n.square();
+    let square = squareMod(n, mod);
     // we choose what computation to apply next
     n = Provable.switch([isOne, isZero, start.not()], Field, [
       square,
-      square.mul(base),
+      // square.mul(base),
+      mulMod(square, base, mod),
       n,
     ]);
 
@@ -30,4 +32,24 @@ export const exp = (base: Field, exponent: Field) => {
   }
 
   return n;
+};
+
+export const mulMod = (a: Field, b: Field, mod: Field) => {
+  let product = a.mul(b);
+  let res = Provable.if(
+    product.greaterThanOrEqual(mod),
+    product.sub(mod),
+    product
+  );
+  return res;
+};
+
+export const squareMod = (a: Field, mod: Field) => {
+  let product = a.square();
+  let res = Provable.if(
+    product.greaterThanOrEqual(mod),
+    product.sub(mod),
+    product
+  );
+  return res;
 };

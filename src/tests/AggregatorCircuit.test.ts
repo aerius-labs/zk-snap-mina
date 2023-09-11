@@ -11,7 +11,7 @@ import {
   PublicKey,
   Signature,
   verify,
-} from 'snarkyjs';
+} from 'o1js';
 import {
   MyMerkleWitness,
   UserCircuit,
@@ -104,8 +104,10 @@ describe('Aggregator Circuit Test', () => {
     const vote: Field = Field(1);
     const voteWeight: Field = Field(50);
 
+    const r_encryption: Field = Field.random();
     const encryptedVote = encryptionPublicKey.encrypt(
-      vote.toBigInt() * voteWeight.toBigInt()
+      vote.toBigInt() * voteWeight.toBigInt(),
+      r_encryption.toBigInt()
     );
 
     const salt: Field = Field.random();
@@ -136,7 +138,8 @@ describe('Aggregator Circuit Test', () => {
       nullifier,
       EncryptionPublicKey.create(
         Field(encryptionPublicKey.n),
-        Field(encryptionPublicKey.g)
+        Field(encryptionPublicKey.g),
+        Field(encryptionPublicKey._n2)
       ),
       voterRoot,
       userPublicKey,
@@ -150,6 +153,7 @@ describe('Aggregator Circuit Test', () => {
       userSignature,
       vote,
       voteWeight,
+      r_encryption,
       salt,
       userBalance,
       merkleProof
@@ -166,7 +170,8 @@ describe('Aggregator Circuit Test', () => {
     aggregatorState = AggregatorState.create(
       EncryptionPublicKey.create(
         Field(encryptionPublicKey.n),
-        Field(encryptionPublicKey.g)
+        Field(encryptionPublicKey.g),
+        Field(encryptionPublicKey._n2)
       ),
       electionID,
       voterRoot,
@@ -231,7 +236,8 @@ describe('Aggregator Circuit Test', () => {
     aggregatorState = AggregatorState.create(
       EncryptionPublicKey.create(
         Field(encryptionPublicKey.n),
-        Field(encryptionPublicKey.g)
+        Field(encryptionPublicKey.g),
+        Field(encryptionPublicKey._n2)
       ),
       electionID,
       voterRoot,

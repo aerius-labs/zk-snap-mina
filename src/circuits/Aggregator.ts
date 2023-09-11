@@ -7,7 +7,7 @@ import {
   State,
   method,
   state,
-} from 'snarkyjs';
+} from 'o1js';
 import { AggregatorCircuit, AggregatorState } from './AggregatorCircuit';
 import { EncryptionPublicKey } from '../utils/PallierZK';
 

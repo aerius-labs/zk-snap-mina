@@ -5,9 +5,9 @@ import {
   PublicKey,
   SelfProof,
   MerkleMapWitness,
-} from 'snarkyjs';
+} from 'o1js';
 import { UserCircuit, UserState } from './UserCircuit';
-import { ZkProgram } from 'snarkyjs/dist/node/lib/proof_system';
+import { ZkProgram } from 'o1js/dist/node/lib/proof_system';
 import { EncryptionPublicKey } from '../utils/PallierZK';
 
 export class AggregatorState extends Struct({
