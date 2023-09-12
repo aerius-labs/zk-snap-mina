@@ -51,11 +51,13 @@ describe('User Circuit Test', () => {
     const vote: Field = Field(1);
     const voteWeight: Field = Field(50);
 
-    const r_encryption: Field = Field.random();
+    const r_encryption: Field = Field(6942);
     const encryptedVote = encryptionPublicKey.encrypt(
       vote.toBigInt() * voteWeight.toBigInt(),
       r_encryption.toBigInt()
     );
+    console.log('msg', vote.toBigInt() * voteWeight.toBigInt());
+    console.log('r', r_encryption.toBigInt());
     console.log('Encrypted Vote: ', encryptedVote);
 
     const salt: Field = Field.random();

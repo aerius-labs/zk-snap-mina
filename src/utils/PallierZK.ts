@@ -11,6 +11,7 @@ export class EncryptionPublicKey extends Struct({
   }
 
   encrypt(msg: Field, r: Field) {
+    Provable.log('n_2', this.n_2);
     const g_m = exp(this.g, msg, this.n_2);
     Provable.log('g_m', g_m);
     const r_n = exp(r, this.n, this.n_2);

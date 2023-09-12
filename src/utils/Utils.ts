@@ -1,4 +1,4 @@
-import { Field, Bool, Provable } from 'o1js';
+import { Field, Bool, Provable, UInt64 } from 'o1js';
 
 export const exp = (base: Field, exponent: Field, mod: Field) => {
   let bits = exponent.toBits();
@@ -18,7 +18,9 @@ export const exp = (base: Field, exponent: Field, mod: Field) => {
     let isZero = start.and(bit.equals(true));
 
     // let square = n.square();
+    // Provable.log('n', n);
     let square = squareMod(n, mod);
+    // Provable.log('square', square);
     // we choose what computation to apply next
     n = Provable.switch([isOne, isZero, start.not()], Field, [
       square,
@@ -34,22 +36,50 @@ export const exp = (base: Field, exponent: Field, mod: Field) => {
   return n;
 };
 
-export const mulMod = (a: Field, b: Field, mod: Field) => {
-  let product = a.mul(b);
-  let res = Provable.if(
-    product.greaterThanOrEqual(mod),
-    product.sub(mod),
-    product
-  );
-  return res;
+export const mulMod = (a: Field, b: Field, m: Field) => {
+  return mod(a.mul(b), m);
 };
 
-export const squareMod = (a: Field, mod: Field) => {
-  let product = a.square();
-  let res = Provable.if(
-    product.greaterThanOrEqual(mod),
-    product.sub(mod),
-    product
+export const squareMod = (a: Field, m: Field) => {
+  return mod(a.square(), m);
+};
+
+export const divMod = (num: Field, mod: Field) => {
+  let x = num;
+  let y_ = mod;
+
+  if (num.isConstant() && y_.isConstant()) {
+    let xn = x.toBigInt();
+    let yn = y_.toBigInt();
+    let q = xn / yn;
+    let r = xn - q * yn;
+    return {
+      quotient: Field(q),
+      rest: Field(r),
+    };
+  }
+
+  y_ = y_.seal();
+
+  let q = Provable.witness(
+    Field,
+    () => new Field(x.toBigInt() / y_.toBigInt())
   );
-  return res;
+
+  q.rangeCheckHelper(240).assertEquals(q);
+
+  // TODO: Could be a bit more efficient
+  let r = x.sub(q.mul(y_)).seal();
+  r.rangeCheckHelper(240).assertEquals(r);
+
+  let r_ = r;
+  let q_ = q;
+
+  // r_.assertLessThan(y_);
+
+  return { quotient: q_, rest: r_ };
+};
+
+export const mod = (num: Field, mod: Field) => {
+  return divMod(num, mod).rest;
 };
