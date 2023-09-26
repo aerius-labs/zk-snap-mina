@@ -35,8 +35,6 @@ describe('User Circuit Test', () => {
     const { publicKey, privateKey } = await generateEncryptionKeyPair();
     encryptionPrivateKey = privateKey;
     encryptionPublicKey = publicKey;
-    console.log('Encryption Private Key: ', encryptionPrivateKey);
-    console.log('Encryption Public Key: ', encryptionPublicKey);
 
     userPrivateKey = PrivateKey.random();
     userPublicKey = PublicKey.fromPrivateKey(userPrivateKey);
@@ -56,9 +54,6 @@ describe('User Circuit Test', () => {
       vote.toBigInt() * voteWeight.toBigInt(),
       r_encryption.toBigInt()
     );
-    console.log('msg', vote.toBigInt() * voteWeight.toBigInt());
-    console.log('r', r_encryption.toBigInt());
-    console.log('Encrypted Vote: ', encryptedVote);
 
     const salt: Field = Field.random();
 
@@ -97,10 +92,6 @@ describe('User Circuit Test', () => {
     );
 
     const { verificationKey } = await UserCircuit.compile();
-    fs.writeFileSync(
-      path.join(__dirname, '/keys/user_circuit_verification_key.json'),
-      JSON.stringify(verificationKey)
-    );
 
     const userProof = await UserCircuit.generateProof(
       userState,

@@ -1,8 +1,8 @@
 import { Experimental, Field, Provable } from 'o1js';
-import { exp, mod } from '../utils/Utils';
+import { exp, getRandomNBitNumber, mod, modPow } from '../utils/Utils';
 
 describe('Utils Test', () => {
-  xit('should mod correctly', async () => {
+  it('should mod correctly', async () => {
     const circuit = Experimental.ZkProgram({
       publicInput: undefined,
 
@@ -48,10 +48,13 @@ describe('Utils Test', () => {
 
     await circit.compile();
 
-    const base = Field(2n);
-    const expo = Field(10n);
-    const modulus = Field(10240n);
-    const result = Field(1024n);
+    const numBits = 64;
+    const base = Field(getRandomNBitNumber(numBits));
+    const expo = Field(getRandomNBitNumber(numBits));
+    const modulus = Field(getRandomNBitNumber(numBits * 2));
+    const result = Field(
+      modPow(base.toBigInt(), expo.toBigInt(), modulus.toBigInt())
+    );
 
     const proof = await circit.expCircuit(base, expo, modulus, result);
     await circit.verify(proof);
