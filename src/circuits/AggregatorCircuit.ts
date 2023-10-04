@@ -5,19 +5,21 @@ import {
   PublicKey,
   SelfProof,
   MerkleMapWitness,
+  Provable,
 } from 'o1js';
 import { UserCircuit, UserState } from './UserCircuit';
 import { ZkProgram } from 'o1js/dist/node/lib/proof_system';
 import { EncryptionPublicKey } from '../utils/PallierZK';
 
 export class AggregatorState extends Struct({
-  // Public
   encryptionPublicKey: EncryptionPublicKey,
   electionID: Field,
   voterRoot: Field,
   oldNullifierRoot: Field,
   newNullifierRoot: Field,
   nonce: Field,
+  oldVoteCount: Field,
+  newVoteCount: Field,
 }) {
   static create(
     encryptionPublicKey: EncryptionPublicKey,
@@ -25,7 +27,9 @@ export class AggregatorState extends Struct({
     voterRoot: Field,
     oldNullifierRoot: Field,
     newNullifierRoot: Field,
-    nonce: Field
+    nonce: Field,
+    oldVoteCount: Field,
+    newVoteCount: Field
   ) {
     return new AggregatorState({
       encryptionPublicKey,
@@ -34,6 +38,8 @@ export class AggregatorState extends Struct({
       oldNullifierRoot,
       newNullifierRoot,
       nonce,
+      oldVoteCount,
+      newVoteCount,
     });
   }
 }
@@ -59,6 +65,8 @@ export const AggregatorCircuit = Experimental.ZkProgram({
         );
 
         aggregatorstate.nonce.assertEquals(Field(0));
+
+        aggregatorstate.oldVoteCount.assertEquals(aggregatorstate.newVoteCount);
       },
     },
 
@@ -109,6 +117,12 @@ export const AggregatorCircuit = Experimental.ZkProgram({
         earlierProof.publicInput.nonce.assertEquals(
           aggregatorState.nonce.sub(Field(1))
         );
+
+        const newVoteCount = aggregatorState.encryptionPublicKey.add(
+          aggregatorState.oldVoteCount,
+          userProof.publicInput.encrypted_vote
+        );
+        newVoteCount.assertEquals(aggregatorState.newVoteCount);
       },
     },
   },

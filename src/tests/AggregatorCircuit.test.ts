@@ -55,6 +55,9 @@ describe('Aggregator Circuit Test', () => {
   let voterTree: MerkleTree;
   let voterRoot: Field;
 
+  let initVoteCount: Field;
+  let userEncryptedVote: Field;
+
   let userProof: Proof<UserState, void>;
 
   let aggregatorBaseProof: Proof<AggregatorState, void>;
@@ -78,6 +81,13 @@ describe('Aggregator Circuit Test', () => {
     nullifierTree = new MerkleMap();
     oldNullifierRoot = nullifierTree.getRoot();
     newNullifierRoot = oldNullifierRoot;
+
+    initVoteCount = Field(
+      encryptionPublicKey.encrypt(
+        Field(4252463546767452523n).toBigInt(),
+        Field(425345223252).toBigInt()
+      )
+    );
 
     const { verificationKey: vk1 } = await UserCircuit.compile();
     userCircuitVK = vk1;
@@ -104,13 +114,13 @@ describe('Aggregator Circuit Test', () => {
     const vote: Field = Field(1);
     const voteWeight: Field = Field(50);
 
-    const r_encryption: Field = Field.random();
-    const encryptedVote = encryptionPublicKey.encrypt(
-      vote.toBigInt() * voteWeight.toBigInt(),
-      r_encryption.toBigInt()
+    const r_encryption: Field = Field(6942);
+    userEncryptedVote = Field(
+      encryptionPublicKey.encrypt(
+        vote.toBigInt() * voteWeight.toBigInt(),
+        r_encryption.toBigInt()
+      )
     );
-
-    const salt: Field = Field.random();
 
     const userBalance: Field = Field(100);
 
@@ -144,7 +154,7 @@ describe('Aggregator Circuit Test', () => {
       voterRoot,
       userPublicKey,
       electionID,
-      Field(encryptedVote)
+      userEncryptedVote
     );
 
     let time = Date.now();
@@ -154,7 +164,6 @@ describe('Aggregator Circuit Test', () => {
       vote,
       voteWeight,
       r_encryption,
-      salt,
       userBalance,
       merkleProof
     );
@@ -177,7 +186,9 @@ describe('Aggregator Circuit Test', () => {
       voterRoot,
       oldNullifierRoot,
       oldNullifierRoot,
-      nonce
+      nonce,
+      initVoteCount,
+      initVoteCount
     );
 
     let time = Date.now();
@@ -233,6 +244,12 @@ describe('Aggregator Circuit Test', () => {
       userProof.publicInput.nullifier.key()
     );
 
+    const cipherTexts = [
+      initVoteCount.toBigInt(),
+      userEncryptedVote.toBigInt(),
+    ];
+    const newVoteCount = Field(encryptionPublicKey.addition(...cipherTexts));
+
     aggregatorState = AggregatorState.create(
       EncryptionPublicKey.create(
         Field(encryptionPublicKey.n),
@@ -243,7 +260,9 @@ describe('Aggregator Circuit Test', () => {
       voterRoot,
       oldNullifierRoot,
       newNullifierRoot,
-      nonce
+      nonce,
+      initVoteCount,
+      newVoteCount
     );
 
     let time = Date.now();

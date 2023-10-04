@@ -17,21 +17,8 @@ export class EncryptionPublicKey extends Struct({
 
     return c;
   }
-}
 
-export class PaillierCipher extends Struct({
-  c: Field,
-  n_squared: Field,
-}) {
-  add(c: PaillierCipher, n_squared: Field): PaillierCipher {
-    this.n_squared.assertEquals(n_squared);
-
-    let product = this.c.mul(c.c);
-    let res = Provable.if(
-      product.greaterThanOrEqual(n_squared),
-      product.sub(n_squared),
-      product
-    );
-    return new PaillierCipher({ c: res, n_squared });
+  add(c1: Field, c2: Field) {
+    return mulMod(c1, c2, this.n_2);
   }
 }

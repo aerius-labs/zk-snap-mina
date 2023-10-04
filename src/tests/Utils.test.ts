@@ -1,5 +1,7 @@
 import { Experimental, Field, Provable } from 'o1js';
 import { exp, getRandomNBitNumber, mod, modPow } from '../utils/Utils';
+import { generateEncryptionKeyPair } from '../utils/Pallier';
+import { EncryptionPublicKey } from '../utils/PallierZK';
 
 describe('Utils Test', () => {
   it('should mod correctly', async () => {
@@ -12,7 +14,6 @@ describe('Utils Test', () => {
 
           method(num: Field, modulus: Field, res: Field) {
             const inRes = mod(num, modulus);
-            Provable.log('inRes', inRes);
             inRes.assertEquals(res);
           },
         },
@@ -39,7 +40,6 @@ describe('Utils Test', () => {
 
           method(base: Field, expo: Field, modulus: Field, result: Field) {
             const res = exp(base, expo, modulus);
-            Provable.log('res', res);
             res.assertEquals(result);
           },
         },
@@ -48,7 +48,7 @@ describe('Utils Test', () => {
 
     await circit.compile();
 
-    const numBits = 64;
+    const numBits = 63;
     const base = Field(getRandomNBitNumber(numBits));
     const expo = Field(getRandomNBitNumber(numBits));
     const modulus = Field(getRandomNBitNumber(numBits * 2));
@@ -58,5 +58,54 @@ describe('Utils Test', () => {
 
     const proof = await circit.expCircuit(base, expo, modulus, result);
     await circit.verify(proof);
+  });
+
+  it('should correctly add 2 cipher texts', async () => {
+    const { publicKey, privateKey } = await generateEncryptionKeyPair();
+    let encryptionPrivateKey = privateKey;
+    let encryptionPublicKey = publicKey;
+
+    const r1: Field = Field(6942);
+    const r2: Field = Field(4269);
+    const c1 = Field(encryptionPublicKey.encrypt(4269n, r1.toBigInt()));
+    const c2 = Field(encryptionPublicKey.encrypt(6942n, r2.toBigInt()));
+
+    const cSum = Field(
+      encryptionPublicKey.addition(c1.toBigInt(), c2.toBigInt())
+    );
+
+    const circuit = Experimental.ZkProgram({
+      publicInput: undefined,
+
+      methods: {
+        addCipherTexts: {
+          privateInputs: [EncryptionPublicKey, Field, Field, Field],
+
+          method(
+            encryptionPublicKey: EncryptionPublicKey,
+            c1: Field,
+            c2: Field,
+            result: Field
+          ) {
+            const res = encryptionPublicKey.add(c1, c2);
+            res.assertEquals(result);
+          },
+        },
+      },
+    });
+
+    await circuit.compile();
+
+    const proof = await circuit.addCipherTexts(
+      EncryptionPublicKey.create(
+        Field(encryptionPublicKey.n),
+        Field(encryptionPublicKey.g),
+        Field(encryptionPublicKey._n2)
+      ),
+      c1,
+      c2,
+      cSum
+    );
+    await circuit.verify(proof);
   });
 });

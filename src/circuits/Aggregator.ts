@@ -19,6 +19,7 @@ export class Aggregator extends SmartContract {
   @state(EncryptionPublicKey) encryptionPublicKey =
     State<EncryptionPublicKey>();
   @state(Field) voterRoot = State<Field>();
+  @state(Field) voteCount = State<Field>();
 
   @method initializeElection(baseProof: AggregatorProof): void {
     // Verify the Base Aggregator Proof
@@ -40,6 +41,12 @@ export class Aggregator extends SmartContract {
 
     // Verify if the nonce is 0
     baseProof.publicInput.nonce.assertEquals(Field(0));
+
+    // Verify if the vote count is 0
+    baseProof.publicInput.oldVoteCount.assertEquals(
+      baseProof.publicInput.newVoteCount
+    );
+    this.voteCount.set(baseProof.publicInput.newVoteCount);
   }
 
   @method finalizeElection(finalProof: AggregatorProof): void {
@@ -64,5 +71,8 @@ export class Aggregator extends SmartContract {
 
     // Verify if the nonce is greater than 0
     finalProof.publicInput.nonce.assertGreaterThan(Field(0));
+
+    // set final vote count
+    this.voteCount.set(finalProof.publicInput.newVoteCount);
   }
 }
