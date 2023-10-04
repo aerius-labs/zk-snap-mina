@@ -11,7 +11,6 @@ import {
 import { EncryptionPublicKey } from '../utils/PallierZK';
 
 export class UserState extends Struct({
-  // Public
   nullifier: Nullifier,
   encryptionPublicKey: EncryptionPublicKey,
   voterRoot: Field,
@@ -45,15 +44,7 @@ export const UserCircuit = Experimental.ZkProgram({
 
   methods: {
     generateProof: {
-      privateInputs: [
-        Signature,
-        Field,
-        Field,
-        Field,
-        Field,
-        Field,
-        MyMerkleWitness,
-      ],
+      privateInputs: [Signature, Field, Field, Field, Field, MyMerkleWitness],
 
       method(
         userState: UserState,
@@ -61,7 +52,6 @@ export const UserCircuit = Experimental.ZkProgram({
         vote: Field,
         voteWeight: Field,
         r_encryption: Field,
-        salt: Field,
         userBalance: Field,
         merkleProof: MyMerkleWitness
       ) {

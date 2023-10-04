@@ -1,4 +1,3 @@
-import * as fs from 'fs';
 import * as path from 'path';
 import {
   Field,
@@ -55,8 +54,6 @@ describe('User Circuit Test', () => {
       r_encryption.toBigInt()
     );
 
-    const salt: Field = Field.random();
-
     const userBalance: Field = Field(100);
 
     const jsonNullifier = Nullifier.createTestNullifier(
@@ -67,7 +64,6 @@ describe('User Circuit Test', () => {
 
     // Construct Merkle Tree
     const merkleTree = new MerkleTree(8);
-
     merkleTree.setLeaf(0n, Poseidon.hash([userPublicKey.x, userBalance]));
     merkleTree.setLeaf(1n, Field.random());
     merkleTree.setLeaf(2n, Field.random());
@@ -99,7 +95,6 @@ describe('User Circuit Test', () => {
       vote,
       voteWeight,
       r_encryption,
-      salt,
       userBalance,
       merkleProof
     );
