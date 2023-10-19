@@ -17,6 +17,7 @@ import {
 import * as paillierBigint from 'paillier-bigint';
 import { generateEncryptionKeyPair } from '../utils/Pallier';
 import { EncryptionPublicKey } from '../utils/PallierZK';
+import { getRandomNBitNumber } from '../utils/Utils';
 
 const __dirname = path.resolve();
 
@@ -48,7 +49,7 @@ describe('User Circuit Test', () => {
     const vote: Field = Field(1);
     const voteWeight: Field = Field(50);
 
-    const r_encryption: Field = Field(6942);
+    const r_encryption: Field = Field(getRandomNBitNumber(63));
     const encryptedVote = encryptionPublicKey.encrypt(
       vote.toBigInt() * voteWeight.toBigInt(),
       r_encryption.toBigInt()

@@ -1,14 +1,5 @@
-import {
-  Experimental,
-  Field,
-  Struct,
-  PublicKey,
-  SelfProof,
-  MerkleMapWitness,
-  Provable,
-} from 'o1js';
+import { Experimental, Field, Struct, SelfProof, MerkleMapWitness } from 'o1js';
 import { UserCircuit, UserState } from './UserCircuit';
-import { ZkProgram } from 'o1js/dist/node/lib/proof_system';
 import { EncryptionPublicKey } from '../utils/PallierZK';
 
 export class AggregatorState extends Struct({
@@ -73,7 +64,7 @@ export const AggregatorCircuit = Experimental.ZkProgram({
     generateProof: {
       privateInputs: [
         SelfProof,
-        ZkProgram.Proof(UserCircuit),
+        Experimental.ZkProgram.Proof(UserCircuit),
         MerkleMapWitness,
       ],
 
@@ -104,6 +95,12 @@ export const AggregatorCircuit = Experimental.ZkProgram({
 
         // Verify if the Voter Root matches
         userProof.publicInput.voterRoot.assertEquals(aggregatorState.voterRoot);
+
+        // verify correct message was included in nullifier
+        userProof.publicInput.nullifier.verify([
+          userProof.publicInput.userPublicKey.x,
+          userProof.publicInput.electionID,
+        ]);
 
         // Add the Nullifier to the oldNullifierRoot
         userProof.publicInput.nullifier.assertUnused(
