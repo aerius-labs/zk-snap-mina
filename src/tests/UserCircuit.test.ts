@@ -1,5 +1,6 @@
 import * as path from 'path';
 import {
+  Bool,
   Field,
   MerkleTree,
   Nullifier,
@@ -46,14 +47,18 @@ describe('User Circuit Test', () => {
       electionID,
     ]);
 
-    const vote: Field = Field(1);
+    const vote: Field[] = [Field(2), Field(1)];
     const voteWeight: Field = Field(50);
 
     const r_encryption: Field = Field(getRandomNBitNumber(63));
-    const encryptedVote = encryptionPublicKey.encrypt(
-      vote.toBigInt() * voteWeight.toBigInt(),
-      r_encryption.toBigInt()
-    );
+    const encryptedVote = [];
+    for (let i = 0; i < 2; i++) {
+      const enc = encryptionPublicKey.encrypt(
+        vote[i].toBigInt(),
+        r_encryption.toBigInt()
+      );
+      encryptedVote.push(Field(enc));
+    }
 
     const userBalance: Field = Field(100);
 
@@ -65,7 +70,7 @@ describe('User Circuit Test', () => {
 
     // Construct Merkle Tree
     const merkleTree = new MerkleTree(8);
-    merkleTree.setLeaf(0n, Poseidon.hash([userPublicKey.x, userBalance]));
+    merkleTree.setLeaf(0n, Poseidon.hash([userPublicKey.x]));
     merkleTree.setLeaf(1n, Field.random());
     merkleTree.setLeaf(2n, Field.random());
     merkleTree.setLeaf(3n, Field.random());
@@ -76,7 +81,7 @@ describe('User Circuit Test', () => {
     const merkleProof = new MyMerkleWitness(merkleWitness);
 
     const userState = UserState.create(
-      nullifier,
+      // nullifier,
       EncryptionPublicKey.create(
         Field(encryptionPublicKey.n),
         Field(encryptionPublicKey.g),
@@ -85,7 +90,7 @@ describe('User Circuit Test', () => {
       voterRoot,
       userPublicKey,
       electionID,
-      Field(encryptedVote)
+      encryptedVote
     );
 
     const { verificationKey } = await UserCircuit.compile();
@@ -94,9 +99,9 @@ describe('User Circuit Test', () => {
       userState,
       userSignature,
       vote,
-      voteWeight,
+      // voteWeight,
       r_encryption,
-      userBalance,
+      // userBalance,
       merkleProof
     );
 

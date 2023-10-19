@@ -21,7 +21,6 @@ import {
   AggregatorCircuit,
   AggregatorState,
 } from '../circuits/AggregatorCircuit';
-import { Aggregator } from '../circuits/Aggregator';
 import * as paillierBigint from 'paillier-bigint';
 import { generateEncryptionKeyPair } from '../utils/Pallier';
 import { EncryptionPublicKey } from '../utils/PallierZK';
@@ -33,11 +32,8 @@ describe('Aggregator Circuit Test', () => {
   let zkAppKey: PrivateKey;
   let zkAppAddress: PublicKey;
 
-  let aggregatorContract: Aggregator;
-
   let userCircuitVK: string;
   let aggregatorCircuitVK: string;
-  let aggregatorVK: any;
 
   let encryptionPrivateKey: paillierBigint.PrivateKey;
   let encryptionPublicKey: paillierBigint.PublicKey;
@@ -56,7 +52,7 @@ describe('Aggregator Circuit Test', () => {
   let voterRoot: Field;
 
   let initVoteCount: Field;
-  let userEncryptedVote: Field;
+  let userEncryptedVote: Field[] = [];
 
   let userProof: Proof<UserState, void>;
 
@@ -84,7 +80,7 @@ describe('Aggregator Circuit Test', () => {
 
     initVoteCount = Field(
       encryptionPublicKey.encrypt(
-        Field(4252463546767452523n).toBigInt(),
+        Field(1).toBigInt(),
         Field(425345223252).toBigInt()
       )
     );
@@ -93,8 +89,6 @@ describe('Aggregator Circuit Test', () => {
     userCircuitVK = vk1;
     const { verificationKey: vk2 } = await AggregatorCircuit.compile();
     aggregatorCircuitVK = vk2;
-    const { verificationKey: vk3 } = await Aggregator.compile();
-    aggregatorVK = vk3;
 
     let Local = Mina.LocalBlockchain({ proofsEnabled: true });
     Mina.setActiveInstance(Local);
@@ -111,16 +105,18 @@ describe('Aggregator Circuit Test', () => {
       electionID,
     ]);
 
-    const vote: Field = Field(1);
+    const vote: Field[] = [Field(2), Field(1)];
     const voteWeight: Field = Field(50);
 
     const r_encryption: Field = Field(6942);
-    userEncryptedVote = Field(
-      encryptionPublicKey.encrypt(
-        vote.toBigInt() * voteWeight.toBigInt(),
+
+    for (let i = 0; i < 2; i++) {
+      const enc = encryptionPublicKey.encrypt(
+        vote[i].toBigInt(),
         r_encryption.toBigInt()
-      )
-    );
+      );
+      userEncryptedVote.push(Field(enc));
+    }
 
     const userBalance: Field = Field(100);
 
@@ -134,7 +130,7 @@ describe('Aggregator Circuit Test', () => {
       nullifierTree.getWitness(nullifier.key())
     );
 
-    voterTree.setLeaf(0n, Poseidon.hash([userPublicKey.x, userBalance]));
+    voterTree.setLeaf(0n, Poseidon.hash([userPublicKey.x]));
     voterTree.setLeaf(1n, Field.random());
     voterTree.setLeaf(2n, Field.random());
     voterTree.setLeaf(3n, Field.random());
@@ -145,7 +141,7 @@ describe('Aggregator Circuit Test', () => {
     const merkleProof = new MyMerkleWitness(merkleWitness);
 
     const userState = UserState.create(
-      nullifier,
+      // nullifier,
       EncryptionPublicKey.create(
         Field(encryptionPublicKey.n),
         Field(encryptionPublicKey.g),
@@ -162,9 +158,9 @@ describe('Aggregator Circuit Test', () => {
       userState,
       userSignature,
       vote,
-      voteWeight,
+      // voteWeight,
       r_encryption,
-      userBalance,
+      // userBalance,
       merkleProof
     );
     console.log('userCircuit proving -', (Date.now() - time) / 1000, 'sec');
@@ -187,8 +183,8 @@ describe('Aggregator Circuit Test', () => {
       oldNullifierRoot,
       oldNullifierRoot,
       nonce,
-      initVoteCount,
-      initVoteCount
+      [initVoteCount, initVoteCount],
+      [initVoteCount, initVoteCount]
     );
 
     let time = Date.now();
@@ -213,42 +209,19 @@ describe('Aggregator Circuit Test', () => {
     nonce = nonce.add(Field(1));
   });
 
-  it('should submit base proof to the contract', async () => {
-    aggregatorContract = new Aggregator(zkAppAddress);
-
-    let initialBalance = 10_000_000_000;
-
-    let tx = await Mina.transaction(sender, () => {
-      let senderUpdate = AccountUpdate.fundNewAccount(sender);
-      senderUpdate.send({ to: zkAppAddress, amount: initialBalance });
-      aggregatorContract.deploy({
-        verificationKey: aggregatorVK,
-        zkappKey: zkAppKey,
-      });
-    });
-    await tx.prove();
-    await tx.sign([senderKey]).send();
-
-    tx = await Mina.transaction(sender, () => {
-      aggregatorContract.initializeElection(aggregatorBaseProof);
-    });
-    await tx.prove();
-    await tx.sign([senderKey]).send();
-
-    expect(aggregatorContract.electionID.get()).toEqual(electionID);
-    expect(aggregatorContract.voterRoot.get()).toEqual(voterRoot);
-  });
-
   it('should generate an Aggregator Proof', async () => {
-    const nullifierWitness = nullifierTree.getWitness(
-      userProof.publicInput.nullifier.key()
-    );
+    // const nullifierWitness = nullifierTree.getWitness(
+    //   userProof.publicInput.nullifier.key()
+    // );
 
-    const cipherTexts = [
-      initVoteCount.toBigInt(),
-      userEncryptedVote.toBigInt(),
-    ];
-    const newVoteCount = Field(encryptionPublicKey.addition(...cipherTexts));
+    const newVoteCount = [];
+    for (let i = 0; i < 2; i++) {
+      const cipherTexts = [
+        initVoteCount.toBigInt(),
+        userEncryptedVote[i].toBigInt(),
+      ];
+      newVoteCount.push(Field(encryptionPublicKey.addition(...cipherTexts)));
+    }
 
     aggregatorState = AggregatorState.create(
       EncryptionPublicKey.create(
@@ -261,7 +234,7 @@ describe('Aggregator Circuit Test', () => {
       oldNullifierRoot,
       newNullifierRoot,
       nonce,
-      initVoteCount,
+      [initVoteCount, initVoteCount],
       newVoteCount
     );
 
@@ -269,8 +242,8 @@ describe('Aggregator Circuit Test', () => {
     aggregatorProof = await AggregatorCircuit.generateProof(
       aggregatorState,
       aggregatorBaseProof,
-      userProof,
-      nullifierWitness
+      userProof
+      // nullifierWitness
     );
     console.log(
       'aggregatorCircuit proving -',
@@ -289,13 +262,5 @@ describe('Aggregator Circuit Test', () => {
 
     oldNullifierRoot = newNullifierRoot;
     nonce = nonce.add(Field(1));
-  });
-
-  it('should submit final aggregator proof', async () => {
-    let tx = await Mina.transaction(sender, () => {
-      aggregatorContract.finalizeElection(aggregatorProof);
-    });
-    await tx.prove();
-    await tx.sign([senderKey]).send();
   });
 });

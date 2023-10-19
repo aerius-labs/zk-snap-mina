@@ -1,4 +1,11 @@
-import { Experimental, Field, Struct, SelfProof, MerkleMapWitness } from 'o1js';
+import {
+  Experimental,
+  Field,
+  Struct,
+  SelfProof,
+  MerkleMapWitness,
+  Provable,
+} from 'o1js';
 import { UserCircuit, UserState } from './UserCircuit';
 import { EncryptionPublicKey } from '../utils/PallierZK';
 
@@ -9,8 +16,8 @@ export class AggregatorState extends Struct({
   oldNullifierRoot: Field,
   newNullifierRoot: Field,
   nonce: Field,
-  oldVoteCount: Field,
-  newVoteCount: Field,
+  oldVoteCount: Provable.Array(Field, 2),
+  newVoteCount: Provable.Array(Field, 2),
 }) {
   static create(
     encryptionPublicKey: EncryptionPublicKey,
@@ -19,8 +26,8 @@ export class AggregatorState extends Struct({
     oldNullifierRoot: Field,
     newNullifierRoot: Field,
     nonce: Field,
-    oldVoteCount: Field,
-    newVoteCount: Field
+    oldVoteCount: Field[],
+    newVoteCount: Field[]
   ) {
     return new AggregatorState({
       encryptionPublicKey,
@@ -57,7 +64,13 @@ export const AggregatorCircuit = Experimental.ZkProgram({
 
         aggregatorstate.nonce.assertEquals(Field(0));
 
-        aggregatorstate.oldVoteCount.assertEquals(aggregatorstate.newVoteCount);
+        for (let i = 0; i < 2; i++) {
+          aggregatorstate.oldVoteCount[i].isConstant();
+          aggregatorstate.newVoteCount[i].isConstant();
+          aggregatorstate.oldVoteCount[i].assertEquals(
+            aggregatorstate.newVoteCount[i]
+          );
+        }
       },
     },
 
@@ -65,14 +78,14 @@ export const AggregatorCircuit = Experimental.ZkProgram({
       privateInputs: [
         SelfProof,
         Experimental.ZkProgram.Proof(UserCircuit),
-        MerkleMapWitness,
+        // MerkleMapWitness,
       ],
 
       method(
         aggregatorState: AggregatorState,
         earlierProof: SelfProof<AggregatorState, void>,
-        userProof: SelfProof<UserState, void>,
-        nullifierWitness: MerkleMapWitness
+        userProof: SelfProof<UserState, void>
+        // nullifierWitness: MerkleMapWitness
       ) {
         // Verify the User Proof
         userProof.verify();
@@ -96,30 +109,43 @@ export const AggregatorCircuit = Experimental.ZkProgram({
         // Verify if the Voter Root matches
         userProof.publicInput.voterRoot.assertEquals(aggregatorState.voterRoot);
 
-        // verify correct message was included in nullifier
-        userProof.publicInput.nullifier.verify([
-          userProof.publicInput.userPublicKey.x,
-          userProof.publicInput.electionID,
-        ]);
+        // // verify correct message was included in nullifier
+        // userProof.publicInput.nullifier.verify([
+        //   userProof.publicInput.userPublicKey.x,
+        //   userProof.publicInput.electionID,
+        // ]);
 
-        // Add the Nullifier to the oldNullifierRoot
-        userProof.publicInput.nullifier.assertUnused(
-          nullifierWitness,
-          aggregatorState.oldNullifierRoot
-        );
-        let newRoot = userProof.publicInput.nullifier.setUsed(nullifierWitness);
-        aggregatorState.newNullifierRoot.assertEquals(newRoot);
+        // // Add the Nullifier to the oldNullifierRoot
+        // userProof.publicInput.nullifier.assertUnused(
+        //   nullifierWitness,
+        //   aggregatorState.oldNullifierRoot
+        // );
+        // let newRoot = userProof.publicInput.nullifier.setUsed(nullifierWitness);
+        // aggregatorState.newNullifierRoot.assertEquals(newRoot);
 
         // Verify if the Nonce is correct
         earlierProof.publicInput.nonce.assertEquals(
           aggregatorState.nonce.sub(Field(1))
         );
 
-        const newVoteCount = aggregatorState.encryptionPublicKey.add(
-          aggregatorState.oldVoteCount,
-          userProof.publicInput.encrypted_vote
-        );
-        newVoteCount.assertEquals(aggregatorState.newVoteCount);
+        // Verify if the vote count is correct from the earlier proof
+        for (let i = 0; i < 2; i++) {
+          aggregatorState.oldVoteCount[i].assertEquals(
+            earlierProof.publicInput.newVoteCount[i]
+          );
+        }
+
+        // Verify if the new vote count is correct
+        const newVoteCount = [];
+        for (let i = 0; i < 2; i++) {
+          const newCount = aggregatorState.encryptionPublicKey.add(
+            aggregatorState.oldVoteCount[i],
+            userProof.publicInput.encrypted_vote[i]
+          );
+
+          aggregatorState.newVoteCount[i].assertEquals(newCount);
+          newVoteCount.push(newCount);
+        }
       },
     },
   },

@@ -1,5 +1,6 @@
 import { Field, Bool, Provable, UInt64 } from 'o1js';
 
+// TODO - fix for exponent = 0
 export const exp = (base: Field, exponent: Field, mod: Field) => {
   let bits = exponent.toBits(63);
   let n_base = base;
