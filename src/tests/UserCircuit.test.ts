@@ -1,5 +1,6 @@
 import * as path from 'path';
 import {
+  Cache,
   Field,
   MerkleTree,
   Nullifier,
@@ -88,7 +89,11 @@ describe('User Circuit Test', () => {
       Field(encryptedVote)
     );
 
-    const { verificationKey } = await UserCircuit.compile();
+    const cache = Cache.FileSystem(
+      '/Users/shreyaslondhe/Desktop/dev/aerius-repos/zk-snap/keys'
+    );
+
+    const { verificationKey } = await UserCircuit.compile({ cache });
 
     const userProof = await UserCircuit.generateProof(
       userState,

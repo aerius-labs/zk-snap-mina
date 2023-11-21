@@ -7,6 +7,7 @@ import {
   Struct,
   Nullifier,
   PublicKey,
+  ZkProgram,
 } from 'o1js';
 import { EncryptionPublicKey } from '../utils/PallierZK';
 
@@ -39,7 +40,9 @@ export class UserState extends Struct({
 
 export class MyMerkleWitness extends MerkleWitness(8) {}
 
-export const UserCircuit = Experimental.ZkProgram({
+export const UserCircuit = ZkProgram({
+  name: 'UserCircuit',
+
   publicInput: UserState,
 
   methods: {

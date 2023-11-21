@@ -1,4 +1,4 @@
-import { Experimental, Field, Struct, SelfProof, MerkleMapWitness } from 'o1js';
+import { Field, Struct, SelfProof, MerkleMapWitness, ZkProgram } from 'o1js';
 import { UserCircuit, UserState } from './UserCircuit';
 import { EncryptionPublicKey } from '../utils/PallierZK';
 
@@ -35,7 +35,9 @@ export class AggregatorState extends Struct({
   }
 }
 
-export const AggregatorCircuit = Experimental.ZkProgram({
+export const AggregatorCircuit = ZkProgram({
+  name: 'AggregatorCircuit',
+
   publicInput: AggregatorState,
 
   methods: {
@@ -64,7 +66,7 @@ export const AggregatorCircuit = Experimental.ZkProgram({
     generateProof: {
       privateInputs: [
         SelfProof,
-        Experimental.ZkProgram.Proof(UserCircuit),
+        ZkProgram.Proof(UserCircuit),
         MerkleMapWitness,
       ],
 

@@ -1,5 +1,6 @@
 import {
   AccountUpdate,
+  Cache,
   Field,
   MerkleMap,
   MerkleTree,
@@ -89,11 +90,15 @@ describe('Aggregator Circuit Test', () => {
       )
     );
 
-    const { verificationKey: vk1 } = await UserCircuit.compile();
+    const cache = Cache.FileSystem(
+      '/Users/shreyaslondhe/Desktop/dev/aerius-repos/zk-snap/keys'
+    );
+
+    const { verificationKey: vk1 } = await UserCircuit.compile({ cache });
     userCircuitVK = vk1;
-    const { verificationKey: vk2 } = await AggregatorCircuit.compile();
+    const { verificationKey: vk2 } = await AggregatorCircuit.compile({ cache });
     aggregatorCircuitVK = vk2;
-    const { verificationKey: vk3 } = await Aggregator.compile();
+    const { verificationKey: vk3 } = await Aggregator.compile({ cache });
     aggregatorVK = vk3;
 
     let Local = Mina.LocalBlockchain({ proofsEnabled: true });

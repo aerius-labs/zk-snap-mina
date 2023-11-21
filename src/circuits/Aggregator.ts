@@ -5,13 +5,14 @@ import {
   SelfProof,
   SmartContract,
   State,
+  ZkProgram,
   method,
   state,
 } from 'o1js';
 import { AggregatorCircuit, AggregatorState } from './AggregatorCircuit';
 import { EncryptionPublicKey } from '../utils/PallierZK';
 
-let AggregatorProof_ = Experimental.ZkProgram.Proof(AggregatorCircuit);
+let AggregatorProof_ = ZkProgram.Proof(AggregatorCircuit);
 class AggregatorProof extends AggregatorProof_ {}
 
 export class Aggregator extends SmartContract {
