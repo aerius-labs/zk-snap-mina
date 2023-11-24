@@ -1,8 +1,8 @@
 {
   "name": "zk-snap",
   "version": "0.1.0",
-  "description": "",
-  "author": "",
+  "description": "Circuits for ZkSnap: Private Off-Chain Voting Protocol written in o1js",
+  "author": "aerius-labs",
   "license": "Apache-2.0",
   "keywords": [
     "mina-zkapp",
@@ -46,6 +46,7 @@
     "typescript": "^4.7.2"
   },
   "dependencies": {
+    "mina-signer": "^2.1.1",
     "o1js": "^0.14.*",
     "paillier-bigint": "^3.4.3"
   }
