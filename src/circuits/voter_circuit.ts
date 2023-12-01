@@ -35,7 +35,7 @@ const VoterCircuit = ZkProgram({
     generateProof: {
       privateInputs: [
         Provable.Array(Field, 5),
-        Field,
+        Provable.Array(Field, 5),
         PublicKey,
         WhitelistMerkleWitness,
         Signature,
@@ -45,7 +45,7 @@ const VoterCircuit = ZkProgram({
       method(
         voterState: VoterState,
         vote: Field[],
-        r_enc: Field,
+        r_enc: Field[],
         voterPubKey: PublicKey,
         voterProof: WhitelistMerkleWitness,
         voterSig: Signature,
@@ -59,7 +59,7 @@ const VoterCircuit = ZkProgram({
             voterState.encryptionPubKey,
             voterState.encryptedVote[i],
             vote[i],
-            r_enc
+            r_enc[i]
           );
         }
 
