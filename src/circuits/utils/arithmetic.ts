@@ -22,7 +22,7 @@ const exp = (base: Field, exponent: Field, mod: Field) => {
     start = Provable.if(bit.equals(true).and(start.not()), Bool(true), start);
   }
 
-  n_base = Provable.if(exponent.equals(Field(0)), Field(0), n_base);
+  n_base = Provable.if(exponent.equals(Field(0)), Field(1), n_base);
 
   return n_base;
 };

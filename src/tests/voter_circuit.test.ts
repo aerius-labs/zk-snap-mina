@@ -14,7 +14,7 @@ import {
   getRandomNBitNumber,
 } from '../utils/encryption_utils';
 import { WhitelistMerkleWitness } from '../circuits/voting_strategies/whitelist';
-import { UserCircuit, UserState } from '../circuits/voter_circuit';
+import { VoterCircuit, VoterState } from '../circuits/voter_circuit';
 import { EncryptionPublicKey } from '../circuits/utils/paillier';
 
 describe('User Circuit Tests', () => {
@@ -61,7 +61,7 @@ describe('User Circuit Tests', () => {
       proposalId,
     ]);
 
-    const userVote = [Field(0), Field(1), Field(0)];
+    const userVote = [Field(0), Field(1), Field(0), Field(0), Field(0)];
     const r_enc: Field = Field(getRandomNBitNumber(63));
     let userEncVote = [];
     for (let i = 0; i < userVote.length; i++) {
@@ -81,7 +81,7 @@ describe('User Circuit Tests', () => {
       userInclusionProofWitness
     );
 
-    const userState = new UserState({
+    const voterState = new VoterState({
       voterWhitelistRoot: membersRoot,
       proposalId: proposalId,
       encryptedVote: userEncVote,
@@ -90,12 +90,12 @@ describe('User Circuit Tests', () => {
     });
 
     console.time('circuit compilation...');
-    const { verificationKey } = await UserCircuit.compile({ cache });
+    const { verificationKey } = await VoterCircuit.compile({ cache });
     console.timeEnd('circuit compilation...');
 
     console.time('proof generation...');
-    const proof = await UserCircuit.generateProof(
-      userState,
+    const proof = await VoterCircuit.generateProof(
+      voterState,
       userVote,
       r_enc,
       userPubKey,
@@ -106,7 +106,7 @@ describe('User Circuit Tests', () => {
     console.timeEnd('proof generation...');
 
     console.time('proof verification...');
-    const ok = await UserCircuit.verify(proof);
+    const ok = await VoterCircuit.verify(proof);
     console.timeEnd('proof verification...');
 
     expect(ok).toBeTruthy();
