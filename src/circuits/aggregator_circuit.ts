@@ -8,6 +8,10 @@ import {
 } from 'o1js';
 import { EncryptionPublicKey } from './utils/paillier';
 import { VoterCircuit, VoterState } from './voter_circuit';
+import {
+  assertNullifierUnused,
+  setNullifierUsed,
+} from './vote_validation/vote_validation';
 
 class AggregatorState extends Struct({
   encryptionPubKey: EncryptionPublicKey,
@@ -57,7 +61,7 @@ const AggregatorCircuit = ZkProgram({
       ],
 
       method(
-        _: AggregatorState,
+        aggregatorState: AggregatorState,
         earlierProof: SelfProof<AggregatorState, void>,
         voterProof: SelfProof<VoterState, void>,
         nullifierWitness: MerkleMapWitness
@@ -68,14 +72,57 @@ const AggregatorCircuit = ZkProgram({
         earlierProof.publicInput.voterWhitelistRoot.assertEquals(
           voterProof.publicInput.voterWhitelistRoot
         );
+        earlierProof.publicInput.voterWhitelistRoot.assertEquals(
+          aggregatorState.voterWhitelistRoot
+        );
 
         earlierProof.publicInput.proposalId.assertEquals(
           voterProof.publicInput.proposalId
+        );
+        earlierProof.publicInput.proposalId.assertEquals(
+          aggregatorState.proposalId
         );
 
         earlierProof.publicInput.encryptionPubKey.assertEquals(
           voterProof.publicInput.encryptionPubKey
         );
+        earlierProof.publicInput.encryptionPubKey.assertEquals(
+          aggregatorState.encryptionPubKey
+        );
+
+        earlierProof.publicInput.newNullifierRoot.assertEquals(
+          aggregatorState.oldNullifierRoot
+        );
+
+        for (let i = 0; i < 5; i++) {
+          earlierProof.publicInput.newVoteCount[i].assertEquals(
+            aggregatorState.oldVoteCount[i]
+          );
+        }
+
+        for (let i = 0; i < 5; i++) {
+          earlierProof.publicInput.encryptionPubKey
+            .add(
+              earlierProof.publicInput.newVoteCount[i],
+              voterProof.publicInput.encryptedVote[i]
+            )
+            .assertEquals(aggregatorState.newVoteCount[i]);
+        }
+
+        earlierProof.publicInput.newNullifierRoot.assertEquals(
+          aggregatorState.oldNullifierRoot
+        );
+
+        assertNullifierUnused(
+          voterProof.publicInput.voterNullifierKey,
+          nullifierWitness,
+          aggregatorState.oldNullifierRoot
+        );
+
+        setNullifierUsed(
+          voterProof.publicInput.voterNullifierKey,
+          nullifierWitness
+        ).assertEquals(aggregatorState.newNullifierRoot);
       },
     },
   },
