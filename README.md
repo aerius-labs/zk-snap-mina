@@ -7,6 +7,14 @@ Traditional voting systems often expose participants to the bandwagon effect, su
 
 Our unique integration of storage proofs guarantees the transparency and accuracy of the voting power of individuals. By leveraging storage proofs, we are able to verify the integrity of the voting individual and the exact voting power that they hold.
 
+## Circuit Layout
+
+### Voter Circuit
+![Untitled Diagram-2](https://github.com/aerius-labs/zk-snap/assets/62744899/50ab4575-9258-48d5-9637-9bb060a6e731)
+
+### Aggregator Circuit
+![Untitled Diagram](https://github.com/aerius-labs/zk-snap/assets/62744899/3e0163f3-5854-4825-ba03-a0ada7421207)
+
 ## Setup & Installation
 
 1. **Clone the repository:**
